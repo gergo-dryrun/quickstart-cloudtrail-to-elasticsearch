@@ -1,0 +1,10 @@
+{
+  "visState": "{\"title\":\"TopNReports\",\"type\":\"markdown\",\"params\":{\"markdown\":\"# TOP N REPORTS\"},\"aggs\":[],\"listeners\":{}}", 
+  "description": "", 
+  "title": "TopNReports", 
+  "uiStateJSON": "{}", 
+  "version": 1, 
+  "kibanaSavedObjectMeta": {
+    "searchSourceJSON": "{\"query\":{\"query_string\":{\"query\":\"*\",\"analyze_wildcard\":true}},\"filter\":[]}"
+  }
+}

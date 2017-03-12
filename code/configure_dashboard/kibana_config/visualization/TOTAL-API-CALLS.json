@@ -1,0 +1,10 @@
+{
+  "visState": "{\"title\":\"TOTAL API CALLS\",\"type\":\"metric\",\"params\":{\"handleNoResults\":true,\"fontSize\":60},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{\"customLabel\":\"Total API Calls\"}}],\"listeners\":{}}", 
+  "description": "", 
+  "title": "TOTAL API CALLS", 
+  "uiStateJSON": "{\"spy\":{\"mode\":{\"name\":null,\"fill\":false}}}", 
+  "version": 1, 
+  "kibanaSavedObjectMeta": {
+    "searchSourceJSON": "{\"index\":\"cwl-*\",\"query\":{\"query_string\":{\"query\":\"*\",\"analyze_wildcard\":true}},\"filter\":[]}"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "visState": "{\"title\":\"ByUserType\",\"type\":\"markdown\",\"params\":{\"markdown\":\"# ACTIVITY BY USER TYPE\"},\"aggs\":[],\"listeners\":{}}", 
+  "description": "", 
+  "title": "ByUserType", 
+  "uiStateJSON": "{}", 
+  "version": 1, 
+  "kibanaSavedObjectMeta": {
+    "searchSourceJSON": "{\"query\":{\"query_string\":{\"query\":\"*\",\"analyze_wildcard\":true}},\"filter\":[]}"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "visState": "{\"type\":\"timelion\",\"title\":\"Day Difference\",\"params\":{\"expression\":\".es(index=\\\"cwl-*\\\").label('current') .es(index=\\\"cwl-*\\\", offset=-1d).label('previous day')\",\"interval\":\"auto\"}}", 
+  "description": "", 
+  "title": "Day Difference", 
+  "uiStateJSON": "{}", 
+  "version": 1, 
+  "kibanaSavedObjectMeta": {
+    "searchSourceJSON": "{}"
+  }
+}

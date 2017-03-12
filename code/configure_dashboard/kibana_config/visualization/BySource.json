@@ -1,0 +1,10 @@
+{
+  "visState": "{\"title\":\"BySource\",\"type\":\"markdown\",\"params\":{\"markdown\":\"# ACTIVITY BY SOURCE\"},\"aggs\":[],\"listeners\":{}}", 
+  "description": "", 
+  "title": "BySource", 
+  "uiStateJSON": "{}", 
+  "version": 1, 
+  "kibanaSavedObjectMeta": {
+    "searchSourceJSON": "{\"query\":{\"query_string\":{\"query\":\"*\",\"analyze_wildcard\":true}},\"filter\":[]}"
+  }
+}

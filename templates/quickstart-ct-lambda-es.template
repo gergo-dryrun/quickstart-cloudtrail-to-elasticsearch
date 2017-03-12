@@ -47,13 +47,17 @@ Parameters:
     c4.large.elasticsearch, c4.xlarge.elasticsearch, c4.2xlarge.elasticsearch, c4.4xlarge.elasticsearch, c4.8xlarge.elasticsearch,
     r4.large.elasticsearch, r4.xlarge.elasticsearch, r4.2xlarge.elasticsearch, r4.4xlarge.elasticsearch, r4.8xlarge.elasticsearch, r4.16xlarge.elasticsearch]
     ConstraintDescription: must be a valid elasticsearch EC2 instance type.
+
 Conditions:
   DedicatedMaster: !Equals [!Ref DedicatedMaster, "true"]
+
 Resources:
+
   S3Bucket:
     DeletionPolicy: Retain
     Type: "AWS::S3::Bucket"
     Properties: {}
+
   BucketPolicy:
     Type: "AWS::S3::BucketPolicy"
     Properties:
@@ -83,11 +87,13 @@ Resources:
             Condition:
               StringEquals:
                 s3:x-amz-acl: "bucket-owner-full-control"
+
   CloudWatchGroup:
     Type: "AWS::Logs::LogGroup"
     Properties:
       RetentionInDays: 3
-  CloudWatchRole:
+
+  CloudTrailRole:
     Type: "AWS::IAM::Role"
     Properties:
       AssumeRolePolicyDocument:
@@ -101,11 +107,12 @@ Resources:
             Action:
               - "sts:AssumeRole"
       Path: "/"
-  RolePolicies:
+
+  CloudTrailRolePolicies:
     DependsOn: CloudWatchGroup
     Type: "AWS::IAM::Policy"
     Properties:
-      PolicyName: "root"
+      PolicyName: "logs-put"
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -114,11 +121,15 @@ Resources:
             Action: ["logs:CreateLogStream", "logs:PutLogEvents"]
             Resource:
               -
-                !GetAtt [CloudWatchGroup, Arn]
-      Roles: !Ref CloudWatchRole
+                !GetAtt CloudWatchGroup.Arn
+      Roles:
+        -
+          !Ref CloudTrailRole
+
   ElasticsearchDomain:
     Type: "AWS::Elasticsearch::Domain"
     Properties:
+      ElasticsearchVersion: 5.1
       ElasticsearchClusterConfig:
         DedicatedMasterEnabled: "true"
         InstanceCount: !Ref NodeInstanceCount
@@ -134,17 +145,97 @@ Resources:
         AutomatedSnapshotStartHour: "0"
       AdvancedOptions:
         rest.action.multi.allow_explicit_index: "true"
+
   Cloudtrail:
     Type: "AWS::CloudTrail::Trail"
+    DependsOn: BucketPolicy
     Properties:
-      CloudWatchLogsLogGroupArn: !GetAtt [CloudWatchGroup, Arn]
-      CloudWatchLogsRoleArn: !GetAtt [CloudWatchRole, Arn]
+      CloudWatchLogsLogGroupArn: !GetAtt CloudWatchGroup.Arn
+      CloudWatchLogsRoleArn: !GetAtt CloudTrailRole.Arn
       EnableLogFileValidation: true
       IncludeGlobalServiceEvents: true
       IsLogging: true
       IsMultiRegionTrail: true
       S3BucketName: !Ref S3Bucket
+
+  SubscriptionFilter:
+    Type: "AWS::Logs::SubscriptionFilter"
+    DependsOn: LambdaInvokePermission
+    Properties:
+      LogGroupName: !Ref CloudWatchGroup
+      FilterPattern: ""
+      DestinationArn: !GetAtt LambdaFunction.Arn
+
+  LambdaInvokePermission:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      FunctionName: !GetAtt LambdaFunction.Arn
+      Action: "lambda:InvokeFunction"
+      Principal: !Sub
+        - logs.${Region}.amazonaws.com
+        - { Region: !Ref "AWS::Region" }
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !GetAtt CloudWatchGroup.Arn
+
+  LambdaExecutionerRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+
+  LambdaRolePolicies:
+    Type: "AWS::IAM::Policy"
+    Properties:
+      PolicyName: "es-http-post"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Action: ["es:ESHttpPost"]
+            Resource: !Sub
+              - ${ARN}/*
+              - { ARN: !GetAtt ElasticsearchDomain.DomainArn }
+          -
+            Effect: "Allow"
+            Action: ["logs:CreateLogGroup"]
+            Resource:
+              !Sub |-
+                arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+          -
+            Effect: "Allow"
+            Action: ["logs:CreateLogStream", "logs:PutLogEvents"]
+            Resource:
+              !Sub |-
+                arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudwatch-stream-to-elasticsearch:*
+      Roles:
+        -
+          !Ref LambdaExecutionerRole
+
+  LambdaFunction:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      FunctionName: cloudwatch-stream-to-elasticsearch
+      Runtime: nodejs4.3
+      Handler: lambda.handler
+      Role: !GetAtt LambdaExecutionerRole.Arn
+      Environment:
+        Variables:
+          ES_ENDPOINT: !GetAtt ElasticsearchDomain.DomainEndpoint
+          PREFIX: "cwl-"
+      Code:
+        S3Bucket: quickstart-cloudtrail-to-elasticsearch
+        S3Key: code/lambda.zip
 Outputs:
   ElasticSearchServer:
-    Value: !Join ['', ['http://', !GetAtt [ElasticsearchDomain, DomainEndpoint]]]
+    Value: !Join ['', ['http://', !GetAtt ElasticsearchDomain.DomainEndpoint]]
     Description: URL for ElasticSearch endpoint
