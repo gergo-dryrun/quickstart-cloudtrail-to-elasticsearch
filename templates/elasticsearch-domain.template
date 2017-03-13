@@ -62,8 +62,8 @@ Resources:
         DedicatedMasterEnabled: true
         InstanceCount: !Ref NodeInstanceCount
         InstanceType: !Ref NodeInstanceType
-        DedicatedMasterType: !If [DedicatedMaster, !Ref MasterInstanceType, !Ref AWS::NoValue]
-        DedicatedMasterCount: !If [DedicatedMaster, !Ref MasterInstanceType, !Ref AWS::NoValue]
+        DedicatedMasterType: !If [DedicatedMaster, !Ref MasterInstanceType, !Ref "AWS::NoValue"]
+        DedicatedMasterCount: !If [DedicatedMaster, !Ref MasterInstanceType, !Ref "AWS::NoValue"]
       EBSOptions:
         EBSEnabled: true
         Iops: 0
@@ -77,9 +77,13 @@ Resources:
 Outputs:
   ElasticSearchDomainEndpoint:
     Value:  !GetAtt ElasticsearchDomain.DomainEndpoint
-    Exports: !Sub: ${AWS::StackName}-DomainEndpoint
+    Export:
+      Name: !Sub |-
+        ${AWS::StackName}-DomainEndpoint
     Description: ElasticSearch Domain Endpoint
   ElasticSearchDomainARN:
     Value:  !GetAtt ElasticsearchDomain.DomainArn
-    Exports: !Sub: ${AWS::StackName}-DomainArn
+    Export:
+      Name: !Sub |-
+        ${AWS::StackName}-DomainArn
     Description: ElasticSearch Domain ARN

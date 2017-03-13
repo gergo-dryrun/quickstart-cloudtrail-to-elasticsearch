@@ -2,13 +2,12 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Creates custom resource lambda to import cloudtrail dashboard.'
 Parameters:
   ElasticsearchStackName:
-    Description: ElasticSearchDomainName
+    Description: ElasticsearchStackName
     Type: String
     MinLength: 1
     MaxLength: 255
     AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
     Default: QuickstartElasticsearchDomain
-
 Resources:
 
   DashboardSetup:
@@ -43,9 +42,12 @@ Resources:
             Action:
               - es:ESHttpPut
               - es:ESHttpPost
-            Resource: !Sub
-              - ${ARN}/*
-              - { ARN: !ImportValue Fn::Sub: ${ElasticsearchStackName}-DomainArn}
+            Resource:
+              Fn::Sub:
+                - ${ValueFromBaseStack}/*
+                - ValueFromBaseStack:
+                    Fn::ImportValue:
+                      Fn::Sub: ${ElasticsearchStackName}-DomainArn
           -
             Effect: Allow
             Action:
@@ -74,7 +76,9 @@ Resources:
       Role: !GetAtt LambdaExecutionerRole.Arn
       Environment:
         Variables:
-          ES_ENDPOINT: !ImportValue Fn::Sub ${ElasticsearchStackName}-DomainArn
+          ES_ENDPOINT:
+            Fn::ImportValue:
+              Fn::Sub: ${ElasticsearchStackName}-DomainEndpoint
       Code:
         S3Bucket: quickstart-cloudtrail-to-elasticsearch
-        S3Key: code/dashboard.zip
+        S3Key: code/configure_dashboard.zip

@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Creates and configures cloudtrail /s3 bucket/ cloudwatch/ lambda / iam executioner role '
 Parameters:
   ElasticsearchStackName:
-    Description: ElasticSearchDomainName
+    Description: ElasticsearchStackName
     Type: String
     MinLength: 1
     MaxLength: 255
