@@ -1,124 +1,84 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Deploys managed ElasticSearch Domain / policy / lambda / cloudtrail / iam role / security group / subnet'
+Description: 'Creates and configures cloudtrail /s3 bucket/ cloudwatch/ lambda / iam executioner role '
 Parameters:
-  NodeInstanceCount:
-    Description: Number of elasticsearch nodes
-    Type: Number
-    Default: 2
-    MaxValue: 5
-    MinValue: 1
-  NodeInstanceType:
-    Description: 'ElasticSearch node type The t2.micro instance type is supported only with Elasticsearch version 2.3 or 1.5.
-    The m3 instance type is not available in the us-east-2, ap-northeast-2, and ap-south-1 regions.
-    The i2 instance type is not available in the sa-east-1 and us-east-2 regions.
-    The r3 instance type is not available in the sa-east-1 region.'
+  ElasticsearchStackName:
+    Description: ElasticSearchDomainName
     Type: String
-    Default: m3.medium.elasticsearch
-    AllowedValues: [m3.medium.elasticsearch, m3.large.elasticsearch, m3.xlarge.elasticsearch, m3.2xlarge.elasticsearch,
-    m4.large.elasticsearch, m4.xlarge.elasticsearch, m4.2xlarge.elasticsearch, m4.4xlarge.elasticsearch, m4.10xlarge.elasticsearch,
-    t2.micro.elasticsearch, t2.small.elasticsearch, t2.medium.elasticsearch,
-    r3.large.elasticsearch, r3.xlarge.elasticsearch, r3.2xlarge.elasticsearch, r3.4xlarge.elasticsearch, r3.8xlarge.elasticsearch,
-    i2.xlarge.elasticsearch, i2.2xlarge.elasticsearch,
-    d2.xlarge.elasticsearch, d2.2xlarge.elasticsearch, d2.4xlarge.elasticsearch, d2.8xlarge.elasticsearch,
-    c4.large.elasticsearch, c4.xlarge.elasticsearch, c4.2xlarge.elasticsearch, c4.4xlarge.elasticsearch, c4.8xlarge.elasticsearch,
-    r4.large.elasticsearch, r4.xlarge.elasticsearch, r4.2xlarge.elasticsearch, r4.4xlarge.elasticsearch, r4.8xlarge.elasticsearch, r4.16xlarge.elasticsearch]
-    ConstraintDescription: must be a valid elasticsearch EC2 instance type.
-  DedicatedMaster:
-    Description: Dedicated master nodes
-    Type: String
-    Default: "false"
-    AllowedValues: ["false", "true"]
-  MasterInstanceCount:
-    Description: Number of elasticsearch master
-    Type: Number
-    Default: 3
-    MaxValue: 20
-    MinValue: 1
-  MasterInstanceType:
-    Description: 'ElasticSearch master node type'
-    Type: String
-    Default: m3.medium.elasticsearch
-    AllowedValues: [m3.medium.elasticsearch, m3.large.elasticsearch, m3.xlarge.elasticsearch, m3.2xlarge.elasticsearch,
-    m4.large.elasticsearch, m4.xlarge.elasticsearch, m4.2xlarge.elasticsearch, m4.4xlarge.elasticsearch, m4.10xlarge.elasticsearch,
-    t2.micro.elasticsearch, t2.small.elasticsearch, t2.medium.elasticsearch,
-    r3.large.elasticsearch, r3.xlarge.elasticsearch, r3.2xlarge.elasticsearch, r3.4xlarge.elasticsearch, r3.8xlarge.elasticsearch,
-    i2.xlarge.elasticsearch, i2.2xlarge.elasticsearch,
-    d2.xlarge.elasticsearch, d2.2xlarge.elasticsearch, d2.4xlarge.elasticsearch, d2.8xlarge.elasticsearch,
-    c4.large.elasticsearch, c4.xlarge.elasticsearch, c4.2xlarge.elasticsearch, c4.4xlarge.elasticsearch, c4.8xlarge.elasticsearch,
-    r4.large.elasticsearch, r4.xlarge.elasticsearch, r4.2xlarge.elasticsearch, r4.4xlarge.elasticsearch, r4.8xlarge.elasticsearch, r4.16xlarge.elasticsearch]
-    ConstraintDescription: must be a valid elasticsearch EC2 instance type.
-
-Conditions:
-  DedicatedMaster: !Equals [!Ref DedicatedMaster, "true"]
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+    Default: "QuickstartElasticsearchDomain"
 
 Resources:
 
   S3Bucket:
     DeletionPolicy: Retain
-    Type: "AWS::S3::Bucket"
+    Type: AWS::S3::Bucket
     Properties: {}
 
   BucketPolicy:
-    Type: "AWS::S3::BucketPolicy"
+    Type: AWS::S3::BucketPolicy
     Properties:
       Bucket:
         Ref: S3Bucket
       PolicyDocument:
-        Version: "2012-10-17"
+        Version: 2012-10-17
         Statement:
           -
-            Sid: "AWSCloudTrailAclCheck"
-            Effect: "Allow"
+            Sid: AWSCloudTrailAclCheck
+            Effect: Allow
             Principal:
-              Service: "cloudtrail.amazonaws.com"
-            Action: "s3:GetBucketAcl"
+              Service: cloudtrail.amazonaws.com
+            Action: s3:GetBucketAcl
             Resource:
               !Sub |-
                 arn:aws:s3:::${S3Bucket}
           -
-            Sid: "AWSCloudTrailWrite"
-            Effect: "Allow"
+            Sid: AWSCloudTrailWrite
+            Effect: Allow
             Principal:
-              Service: "cloudtrail.amazonaws.com"
-            Action: "s3:PutObject"
+              Service: cloudtrail.amazonaws.com
+            Action: s3:PutObject
             Resource:
               !Sub |-
                 arn:aws:s3:::${S3Bucket}/AWSLogs/${AWS::AccountId}/*
             Condition:
               StringEquals:
-                s3:x-amz-acl: "bucket-owner-full-control"
+                s3:x-amz-acl: bucket-owner-full-control
 
   CloudWatchGroup:
-    Type: "AWS::Logs::LogGroup"
+    Type: AWS::Logs::LogGroup
     Properties:
       RetentionInDays: 3
 
   CloudTrailRole:
-    Type: "AWS::IAM::Role"
+    Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: "2012-10-17"
+        Version: 2012-10-17
         Statement:
           -
-            Effect: "Allow"
+            Effect: Allow
             Principal:
               Service:
-                - "cloudtrail.amazonaws.com"
+                - cloudtrail.amazonaws.com
             Action:
-              - "sts:AssumeRole"
-      Path: "/"
+              - sts:AssumeRole
+      Path: /
 
   CloudTrailRolePolicies:
     DependsOn: CloudWatchGroup
-    Type: "AWS::IAM::Policy"
+    Type: AWS::IAM::Policy
     Properties:
-      PolicyName: "logs-put"
+      PolicyName: logs-put
       PolicyDocument:
-        Version: "2012-10-17"
+        Version: 2012-10-17
         Statement:
           -
-            Effect: "Allow"
-            Action: ["logs:CreateLogStream", "logs:PutLogEvents"]
+            Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
             Resource:
               -
                 !GetAtt CloudWatchGroup.Arn
@@ -126,28 +86,8 @@ Resources:
         -
           !Ref CloudTrailRole
 
-  ElasticsearchDomain:
-    Type: "AWS::Elasticsearch::Domain"
-    Properties:
-      ElasticsearchVersion: 5.1
-      ElasticsearchClusterConfig:
-        DedicatedMasterEnabled: "true"
-        InstanceCount: !Ref NodeInstanceCount
-        InstanceType: !Ref NodeInstanceType
-        DedicatedMasterType: !If [DedicatedMaster, !Ref MasterInstanceType, !Ref "AWS::NoValue"]
-        DedicatedMasterCount: !If [DedicatedMaster, !Ref MasterInstanceType, !Ref "AWS::NoValue"]
-      EBSOptions:
-        EBSEnabled: true
-        Iops: 0
-        VolumeSize: 20
-        VolumeType: "gp2"
-      SnapshotOptions:
-        AutomatedSnapshotStartHour: "0"
-      AdvancedOptions:
-        rest.action.multi.allow_explicit_index: "true"
-
   Cloudtrail:
-    Type: "AWS::CloudTrail::Trail"
+    Type: AWS::CloudTrail::Trail
     DependsOn: BucketPolicy
     Properties:
       CloudWatchLogsLogGroupArn: !GetAtt CloudWatchGroup.Arn
@@ -159,7 +99,7 @@ Resources:
       S3BucketName: !Ref S3Bucket
 
   SubscriptionFilter:
-    Type: "AWS::Logs::SubscriptionFilter"
+    Type: AWS::Logs::SubscriptionFilter
     DependsOn: LambdaInvokePermission
     Properties:
       LogGroupName: !Ref CloudWatchGroup
@@ -167,53 +107,57 @@ Resources:
       DestinationArn: !GetAtt LambdaFunction.Arn
 
   LambdaInvokePermission:
-    Type: "AWS::Lambda::Permission"
+    Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !GetAtt LambdaFunction.Arn
-      Action: "lambda:InvokeFunction"
+      Action: lambda:InvokeFunction
       Principal: !Sub
         - logs.${Region}.amazonaws.com
-        - { Region: !Ref "AWS::Region" }
+        - { Region: !Ref AWS::Region }
       SourceAccount: !Ref AWS::AccountId
       SourceArn: !GetAtt CloudWatchGroup.Arn
 
   LambdaExecutionerRole:
-    Type: "AWS::IAM::Role"
+    Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: "2012-10-17"
+        Version: 2012-10-17
         Statement:
           -
-            Effect: "Allow"
+            Effect: Allow
             Principal:
               Service:
-                - "lambda.amazonaws.com"
+                - lambda.amazonaws.com
             Action:
-              - "sts:AssumeRole"
-      Path: "/"
+              - sts:AssumeRole
+      Path: /
 
   LambdaRolePolicies:
-    Type: "AWS::IAM::Policy"
+    Type: AWS::IAM::Policy
     Properties:
-      PolicyName: "es-http-post"
+      PolicyName: es-http-post
       PolicyDocument:
-        Version: "2012-10-17"
+        Version: 2012-10-17
         Statement:
           -
-            Effect: "Allow"
-            Action: ["es:ESHttpPost"]
+            Effect: Allow
+            Action:
+              - es:ESHttpPost
             Resource: !Sub
               - ${ARN}/*
-              - { ARN: !GetAtt ElasticsearchDomain.DomainArn }
+              - { ARN: !ImportValue Fn::Sub: ${ElasticsearchStackName}-DomainArn}
           -
-            Effect: "Allow"
-            Action: ["logs:CreateLogGroup"]
+            Effect: Allow
+            Action:
+              - logs:CreateLogGroup
             Resource:
               !Sub |-
                 arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
           -
-            Effect: "Allow"
-            Action: ["logs:CreateLogStream", "logs:PutLogEvents"]
+            Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
             Resource:
               !Sub |-
                 arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudwatch-stream-to-elasticsearch:*
@@ -222,20 +166,17 @@ Resources:
           !Ref LambdaExecutionerRole
 
   LambdaFunction:
-    Type: "AWS::Lambda::Function"
+    Type: AWS::Lambda::Function
     Properties:
       FunctionName: cloudwatch-stream-to-elasticsearch
       Runtime: nodejs4.3
-      Handler: lambda.handler
+      Handler: cwlogs-streamer.handler
       Role: !GetAtt LambdaExecutionerRole.Arn
       Environment:
         Variables:
-          ES_ENDPOINT: !GetAtt ElasticsearchDomain.DomainEndpoint
-          PREFIX: "cwl-"
+          ES_ENDPOINT: !ImportValue Fn::Sub ${ElasticsearchStackName}-DomainArn
+          PREFIX: cwl-
       Code:
         S3Bucket: quickstart-cloudtrail-to-elasticsearch
-        S3Key: code/lambda.zip
+        S3Key: code/cwlogs-streamer.zip
 Outputs:
-  ElasticSearchServer:
-    Value: !Join ['', ['http://', !GetAtt ElasticsearchDomain.DomainEndpoint]]
-    Description: URL for ElasticSearch endpoint

@@ -1,0 +1,80 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Creates custom resource lambda to import cloudtrail dashboard.'
+Parameters:
+  ElasticsearchStackName:
+    Description: ElasticSearchDomainName
+    Type: String
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+    Default: QuickstartElasticsearchDomain
+
+Resources:
+
+  DashboardSetup:
+    Type: Custom::DashboardSetup
+    Properties:
+      ServiceToken: !GetAtt DashboardConfigFunction.Arn
+
+  LambdaExecutionerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+
+  LambdaRolePolicies:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: es-http-permissions
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Action:
+              - es:ESHttpPut
+              - es:ESHttpPost
+            Resource: !Sub
+              - ${ARN}/*
+              - { ARN: !ImportValue Fn::Sub: ${ElasticsearchStackName}-DomainArn}
+          -
+            Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+            Resource:
+              !Sub |-
+                arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+          -
+            Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource:
+              !Sub |-
+                arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/kibana5-cloudtrail-dashboard:*
+      Roles:
+        -
+          !Ref LambdaExecutionerRole
+
+  DashboardConfigFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: kibana5-cloudtrail-dashboard
+      Runtime: python2.7
+      Handler: configure_dashboard.handler
+      Role: !GetAtt LambdaExecutionerRole.Arn
+      Environment:
+        Variables:
+          ES_ENDPOINT: !ImportValue Fn::Sub ${ElasticsearchStackName}-DomainArn
+      Code:
+        S3Bucket: quickstart-cloudtrail-to-elasticsearch
+        S3Key: code/dashboard.zip
