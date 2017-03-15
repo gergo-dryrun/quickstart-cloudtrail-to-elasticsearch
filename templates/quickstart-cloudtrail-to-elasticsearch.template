@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Deploys full setup including cloudtrail configuration/dedicated elasticsearch domain/kibana5 dashboard'
+
+Resources:
+  ESDomainStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3-eu-west-1.amazonaws.com/quickstart-cloudtrail-to-elasticsearch/template/elasticsearch-domain.template
+      TimeoutInMinutes: '50'
+  CtCwlogsLambda:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3-eu-west-1.amazonaws.com/quickstart-cloudtrail-to-elasticsearch/template/ct-cwlogs-lambda-to-es.template
+      TimeoutInMinutes: '30'
+      Parameters:
+        ElasticsearchStackName: !Sub ${ESDomainStack.Outputs.StackName}
+  CtCwlogsLambda:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3-eu-west-1.amazonaws.com/quickstart-cloudtrail-to-elasticsearch/template/kibana5-cloudtrail-dashboard.template
+      TimeoutInMinutes: '30'
+      Parameters:
+        ElasticsearchStackName: !Sub ${ESDomainStack.Outputs.StackName}
+Outputs:
+  EndpointUrl:
+    Value: !Sub ${ESDomainStack.Outputs.EndpointURL}
+    Description: Elasticsearch Domain URL
+

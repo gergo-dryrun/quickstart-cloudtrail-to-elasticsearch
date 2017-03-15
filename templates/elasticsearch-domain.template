@@ -13,7 +13,7 @@ Parameters:
     The i2 instance type is not available in the sa-east-1 and us-east-2 regions.
     The r3 instance type is not available in the sa-east-1 region.'
     Type: String
-    Default: m3.medium.elasticsearch
+    Default: t2.small.elasticsearch
     AllowedValues: [m3.medium.elasticsearch, m3.large.elasticsearch, m3.xlarge.elasticsearch, m3.2xlarge.elasticsearch,
     m4.large.elasticsearch, m4.xlarge.elasticsearch, m4.2xlarge.elasticsearch, m4.4xlarge.elasticsearch, m4.10xlarge.elasticsearch,
     t2.micro.elasticsearch, t2.small.elasticsearch, t2.medium.elasticsearch,
