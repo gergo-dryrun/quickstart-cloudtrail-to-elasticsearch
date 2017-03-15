@@ -44,8 +44,8 @@ Resources:
               - es:ESHttpPost
             Resource:
               Fn::Sub:
-                - ${ValueFromBaseStack}/*
-                - ValueFromBaseStack:
+                - ${ValueFromESDomainStack}/*
+                - ValueFromESDomainStack:
                     Fn::ImportValue:
                       Fn::Sub: ${ElasticsearchStackName}-DomainArn
           -

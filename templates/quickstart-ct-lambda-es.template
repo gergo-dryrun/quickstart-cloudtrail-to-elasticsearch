@@ -111,9 +111,7 @@ Resources:
     Properties:
       FunctionName: !GetAtt LambdaFunction.Arn
       Action: lambda:InvokeFunction
-      Principal: !Sub
-        - logs.${Region}.amazonaws.com
-        - { Region: !Ref AWS::Region }
+      Principal: !Sub logs.${AWS::Region}.amazonaws.com
       SourceAccount: !Ref AWS::AccountId
       SourceArn: !GetAtt CloudWatchGroup.Arn
 
@@ -143,9 +141,12 @@ Resources:
             Effect: Allow
             Action:
               - es:ESHttpPost
-            Resource: !Sub
-              - ${ARN}/*
-              - { ARN: !ImportValue Fn::Sub: ${ElasticsearchStackName}-DomainArn}
+            Resource:
+              Fn::Sub:
+                - ${ValueFromESDomainStack}/*
+                - ValueFromESDomainStack:
+                    Fn::ImportValue:
+                      Fn::Sub: ${ElasticsearchStackName}-DomainArn
           -
             Effect: Allow
             Action:
@@ -174,9 +175,10 @@ Resources:
       Role: !GetAtt LambdaExecutionerRole.Arn
       Environment:
         Variables:
-          ES_ENDPOINT: !ImportValue Fn::Sub ${ElasticsearchStackName}-DomainArn
+          ES_ENDPOINT:
+            Fn::ImportValue:
+              Fn::Sub: ${ElasticsearchStackName}-DomainEndpoint
           PREFIX: cwl-
       Code:
         S3Bucket: quickstart-cloudtrail-to-elasticsearch
         S3Key: code/cwlogs-streamer.zip
-Outputs:
