@@ -74,6 +74,7 @@ Resources:
       Runtime: python2.7
       Handler: configure_dashboard.handler
       Role: !GetAtt LambdaExecutionerRole.Arn
+      Timeout: 30
       Environment:
         Variables:
           ES_ENDPOINT:

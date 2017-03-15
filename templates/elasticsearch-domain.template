@@ -26,14 +26,14 @@ Parameters:
   DedicatedMaster:
     Description: Dedicated master nodes
     Type: String
-    Default: false
+    Default: "false"
     AllowedValues:
-      - false
-      - true
+      - "false"
+      - "true"
   MasterInstanceCount:
     Description: Number of elasticsearch master
     Type: Number
-    Default: 3
+    Default: 1
     MaxValue: 20
     MinValue: 1
   MasterInstanceType:
@@ -51,7 +51,7 @@ Parameters:
     ConstraintDescription: must be a valid elasticsearch EC2 instance type.
 
 Conditions:
-  DedicatedMaster: !Equals [!Ref DedicatedMaster, true]
+  CreateDedicatedMaster: !Equals [!Ref DedicatedMaster, "true"]
 
 Resources:
   ElasticsearchDomain:
@@ -59,11 +59,11 @@ Resources:
     Properties:
       ElasticsearchVersion: 5.1
       ElasticsearchClusterConfig:
-        DedicatedMasterEnabled: true
+        DedicatedMasterEnabled: !Ref DedicatedMaster
         InstanceCount: !Ref NodeInstanceCount
         InstanceType: !Ref NodeInstanceType
-        DedicatedMasterType: !If [DedicatedMaster, !Ref MasterInstanceType, !Ref "AWS::NoValue"]
-        DedicatedMasterCount: !If [DedicatedMaster, !Ref MasterInstanceType, !Ref "AWS::NoValue"]
+        DedicatedMasterType: !If [CreateDedicatedMaster, !Ref MasterInstanceType, !Ref "AWS::NoValue"]
+        DedicatedMasterCount: !If [CreateDedicatedMaster, !Ref MasterInstanceCount, !Ref "AWS::NoValue"]
       EBSOptions:
         EBSEnabled: true
         Iops: 0
