@@ -1,16 +1,18 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Creates and configures cloudtrail /s3 bucket/ cloudwatch/ lambda / iam executioner role '
 Parameters:
-  ElasticsearchStackName:
-    Description: ElasticsearchStackName
+  ElasticSearchDomainEndpoint:
+    Description: ElasticSearchDomainEndpoint
     Type: String
     MinLength: 1
     MaxLength: 255
-    AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
-    Default: "QuickstartElasticsearchDomain"
+  ElasticSearchDomainARN:
+    Description: ElasticSearchDomainARN
+    Type: String
+    MinLength: 1
+    MaxLength: 255
 
 Resources:
-
   S3Bucket:
     DeletionPolicy: Retain
     Type: AWS::S3::Bucket
@@ -141,12 +143,7 @@ Resources:
             Effect: Allow
             Action:
               - es:ESHttpPost
-            Resource:
-              Fn::Sub:
-                - ${ValueFromESDomainStack}/*
-                - ValueFromESDomainStack:
-                    Fn::ImportValue:
-                      Fn::Sub: ${ElasticsearchStackName}-DomainArn
+            Resource: !Sub ${ElasticSearchDomainARN}/*
           -
             Effect: Allow
             Action:
@@ -175,9 +172,7 @@ Resources:
       Role: !GetAtt LambdaExecutionerRole.Arn
       Environment:
         Variables:
-          ES_ENDPOINT:
-            Fn::ImportValue:
-              Fn::Sub: ${ElasticsearchStackName}-DomainEndpoint
+          ES_ENDPOINT: !Ref ElasticSearchDomainEndpoint
           PREFIX: cwl-
       Code:
         S3Bucket: quickstart-cloudtrail-to-elasticsearch

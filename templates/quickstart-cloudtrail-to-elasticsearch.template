@@ -1,5 +1,86 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Deploys full setup including cloudtrail configuration/dedicated elasticsearch domain/kibana5 dashboard'
+Parameters:
+  DomainName:
+    Description: Elasticsearch Domain Name
+    Type: String
+    AllowedPattern: "^[a-z][-a-z0-9]+$"
+    Default: cloudtrail-domain
+    MinLength: 1
+    MaxLength: 68
+  NodeInstanceCount:
+    Description: Number of elasticsearch nodes
+    Type: Number
+    Default: 2
+    MaxValue: 5
+    MinValue: 1
+  NodeInstanceType:
+    Description: 'ElasticSearch node type The t2.micro instance type is supported only with Elasticsearch version 2.3 or 1.5.
+    The m3 instance type is not available in the us-east-2, ap-northeast-2, and ap-south-1 regions.
+    The i2 instance type is not available in the sa-east-1 and us-east-2 regions.
+    The r3 instance type is not available in the sa-east-1 region.'
+    Type: String
+    Default: t2.small.elasticsearch
+    AllowedValues: [m3.medium.elasticsearch, m3.large.elasticsearch, m3.xlarge.elasticsearch, m3.2xlarge.elasticsearch,
+    m4.large.elasticsearch, m4.xlarge.elasticsearch, m4.2xlarge.elasticsearch, m4.4xlarge.elasticsearch, m4.10xlarge.elasticsearch,
+    t2.micro.elasticsearch, t2.small.elasticsearch, t2.medium.elasticsearch,
+    r3.large.elasticsearch, r3.xlarge.elasticsearch, r3.2xlarge.elasticsearch, r3.4xlarge.elasticsearch, r3.8xlarge.elasticsearch,
+    i2.xlarge.elasticsearch, i2.2xlarge.elasticsearch,
+    d2.xlarge.elasticsearch, d2.2xlarge.elasticsearch, d2.4xlarge.elasticsearch, d2.8xlarge.elasticsearch,
+    c4.large.elasticsearch, c4.xlarge.elasticsearch, c4.2xlarge.elasticsearch, c4.4xlarge.elasticsearch, c4.8xlarge.elasticsearch,
+    r4.large.elasticsearch, r4.xlarge.elasticsearch, r4.2xlarge.elasticsearch, r4.4xlarge.elasticsearch, r4.8xlarge.elasticsearch, r4.16xlarge.elasticsearch]
+    ConstraintDescription: must be a valid elasticsearch EC2 instance type.
+  EbsVolumeSize:
+    Description: EBS volume size
+    Type: Number
+    Default: 10
+    MinValue: 10
+    MaxValue: 1500
+    ConstraintDescription: Minimum size 10GB. Maximum depends on instance type, can be up to 1.5 TB.
+  EbsIops:
+    Description: Only applicable to io1 EBS volumes
+    Type: Number
+    Default: 0
+    MinValue: 0
+    MaxValue: 20000
+  EbsVolumeType:
+    Description: EBS volume type
+    Type: String
+    Default: gp2
+    AllowedValues: [standard, gp2, io1]
+  DedicatedMaster:
+    Description: Dedicated master nodes
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "false"
+      - "true"
+  MasterInstanceCount:
+    Description: Number of elasticsearch master
+    Type: Number
+    Default: 1
+    MaxValue: 20
+    MinValue: 1
+  MasterInstanceType:
+    Description: 'ElasticSearch master node type'
+    Type: String
+    Default: m3.medium.elasticsearch
+    AllowedValues: [m3.medium.elasticsearch, m3.large.elasticsearch, m3.xlarge.elasticsearch, m3.2xlarge.elasticsearch,
+    m4.large.elasticsearch, m4.xlarge.elasticsearch, m4.2xlarge.elasticsearch, m4.4xlarge.elasticsearch, m4.10xlarge.elasticsearch,
+    t2.micro.elasticsearch, t2.small.elasticsearch, t2.medium.elasticsearch,
+    r3.large.elasticsearch, r3.xlarge.elasticsearch, r3.2xlarge.elasticsearch, r3.4xlarge.elasticsearch, r3.8xlarge.elasticsearch,
+    i2.xlarge.elasticsearch, i2.2xlarge.elasticsearch,
+    d2.xlarge.elasticsearch, d2.2xlarge.elasticsearch, d2.4xlarge.elasticsearch, d2.8xlarge.elasticsearch,
+    c4.large.elasticsearch, c4.xlarge.elasticsearch, c4.2xlarge.elasticsearch, c4.4xlarge.elasticsearch, c4.8xlarge.elasticsearch,
+    r4.large.elasticsearch, r4.xlarge.elasticsearch, r4.2xlarge.elasticsearch, r4.4xlarge.elasticsearch, r4.8xlarge.elasticsearch, r4.16xlarge.elasticsearch]
+    ConstraintDescription: must be a valid elasticsearch EC2 instance type.
+  ZoneAwareness:
+    Description: Enable zone awarness
+    Type: String
+    Default: "true"
+  KibanaAccessIps:
+      Description: 'Comma delimited CIDR ranges for accessing kibana'
+      Type: CommaDelimitedList
 
 Resources:
   ESDomainStack:
@@ -7,22 +88,39 @@ Resources:
     Properties:
       TemplateURL: https://s3-eu-west-1.amazonaws.com/quickstart-cloudtrail-to-elasticsearch/template/elasticsearch-domain.template
       TimeoutInMinutes: '50'
+      Parameters:
+        DomainName: !Ref DomainName
+        NodeInstanceCount: !Ref NodeInstanceCount
+        NodeInstanceType: !Ref NodeInstanceType
+        EbsVolumeSize: !Ref EbsVolumeSize
+        EbsIops: !Ref EbsIops
+        EbsVolumeType: !Ref EbsVolumeType
+        DedicatedMaster: !Ref DedicatedMaster
+        MasterInstanceCount: !Ref MasterInstanceCount
+        MasterInstanceType: !Ref MasterInstanceType
+        ZoneAwareness: !Ref ZoneAwareness
+        KibanaAccessIps:
+          Fn::Join:
+            - ','
+            - !Ref KibanaAccessIps
   CtCwlogsLambda:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: https://s3-eu-west-1.amazonaws.com/quickstart-cloudtrail-to-elasticsearch/template/ct-cwlogs-lambda-to-es.template
       TimeoutInMinutes: '30'
       Parameters:
-        ElasticsearchStackName: !Sub ${ESDomainStack.Outputs.StackName}
-  CtCwlogsLambda:
+        ElasticSearchDomainEndpoint: !GetAtt ESDomainStack.Outputs.ElasticSearchDomainEndpoint
+        ElasticSearchDomainARN: !GetAtt ESDomainStack.Outputs.ElasticSearchDomainARN
+  KibanaCloudtrailDashboard:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: https://s3-eu-west-1.amazonaws.com/quickstart-cloudtrail-to-elasticsearch/template/kibana5-cloudtrail-dashboard.template
       TimeoutInMinutes: '30'
       Parameters:
-        ElasticsearchStackName: !Sub ${ESDomainStack.Outputs.StackName}
+        ElasticSearchDomainEndpoint: !GetAtt ESDomainStack.Outputs.ElasticSearchDomainEndpoint
+        ElasticSearchDomainARN: !GetAtt ESDomainStack.Outputs.ElasticSearchDomainARN
 Outputs:
-  EndpointUrl:
-    Value: !Sub ${ESDomainStack.Outputs.EndpointURL}
-    Description: Elasticsearch Domain URL
+  KibanaEndpointURL:
+    Value: !GetAtt ESDomainStack.Outputs.KibanaEndpointURL
+    Description: Elasticsearch Kibana URL
 

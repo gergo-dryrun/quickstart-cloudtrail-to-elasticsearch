@@ -1,6 +1,13 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Deploys a managed ElasticSearch Domain with ES version 5.1'
 Parameters:
+  DomainName:
+    Description: Elasticsearch Domain Name
+    Type: String
+    AllowedPattern: "^[a-z][-a-z0-9]+$"
+    MinLength: 1
+    MaxLength: 68
+    Default: cloudtrail-domain
   NodeInstanceCount:
     Description: Number of elasticsearch nodes
     Type: Number
@@ -23,6 +30,24 @@ Parameters:
     c4.large.elasticsearch, c4.xlarge.elasticsearch, c4.2xlarge.elasticsearch, c4.4xlarge.elasticsearch, c4.8xlarge.elasticsearch,
     r4.large.elasticsearch, r4.xlarge.elasticsearch, r4.2xlarge.elasticsearch, r4.4xlarge.elasticsearch, r4.8xlarge.elasticsearch, r4.16xlarge.elasticsearch]
     ConstraintDescription: must be a valid elasticsearch EC2 instance type.
+  EbsVolumeSize:
+    Description: EBS volume size
+    Type: Number
+    Default: 10
+    MinValue: 10
+    MaxValue: 1500
+    ConstraintDescription: Minimum size 10GB. Maximum depends on instance type, can be up to 1.5 TB.
+  EbsIops:
+    Description: Only applicable to io1 EBS volumes
+    Type: Number
+    Default: 0
+    MinValue: 0
+    MaxValue: 20000
+  EbsVolumeType:
+    Description: EBS volume type
+    Type: String
+    Default: gp2
+    AllowedValues: [standard, gp2, io1]
   DedicatedMaster:
     Description: Dedicated master nodes
     Type: String
@@ -49,7 +74,16 @@ Parameters:
     c4.large.elasticsearch, c4.xlarge.elasticsearch, c4.2xlarge.elasticsearch, c4.4xlarge.elasticsearch, c4.8xlarge.elasticsearch,
     r4.large.elasticsearch, r4.xlarge.elasticsearch, r4.2xlarge.elasticsearch, r4.4xlarge.elasticsearch, r4.8xlarge.elasticsearch, r4.16xlarge.elasticsearch]
     ConstraintDescription: must be a valid elasticsearch EC2 instance type.
-
+  ZoneAwareness:
+    Description: Enable zone awarness
+    Type: String
+    Default: "true"
+    AllowedValues:
+      - "false"
+      - "true"
+  KibanaAccessIps:
+    Description: 'Comma delimited CIDR ranges for accessing kibana'
+    Type: CommaDelimitedList
 Conditions:
   CreateDedicatedMaster: !Equals [!Ref DedicatedMaster, "true"]
 
@@ -57,8 +91,10 @@ Resources:
   ElasticsearchDomain:
     Type: AWS::Elasticsearch::Domain
     Properties:
+      DomainName: !Ref DomainName
       ElasticsearchVersion: 5.1
       ElasticsearchClusterConfig:
+        ZoneAwarenessEnabled: !Ref ZoneAwareness
         DedicatedMasterEnabled: !Ref DedicatedMaster
         InstanceCount: !Ref NodeInstanceCount
         InstanceType: !Ref NodeInstanceType
@@ -66,14 +102,25 @@ Resources:
         DedicatedMasterCount: !If [CreateDedicatedMaster, !Ref MasterInstanceCount, !Ref "AWS::NoValue"]
       EBSOptions:
         EBSEnabled: true
-        Iops: 0
-        VolumeSize: 20
-        VolumeType: gp2
+        Iops: !Ref EbsIops
+        VolumeSize: !Ref EbsVolumeSize
+        VolumeType: !Ref EbsVolumeType
       SnapshotOptions:
         AutomatedSnapshotStartHour: 0
       AdvancedOptions:
         rest.action.multi.allow_explicit_index: true
-
+      AccessPolicies:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              AWS: "*"
+            Action: "es:Http*"
+            Condition:
+              IpAddress:
+                aws:SourceIp: !Ref KibanaAccessIps
+            Resource: !Sub arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/${DomainName}/*
 Outputs:
   ElasticSearchDomainEndpoint:
     Value:  !GetAtt ElasticsearchDomain.DomainEndpoint
@@ -87,3 +134,9 @@ Outputs:
       Name: !Sub |-
         ${AWS::StackName}-DomainArn
     Description: ElasticSearch Domain ARN
+  KibanaEndpointURL:
+    Value:
+      Fn::Sub:
+        - https://${URL}/_plugin/kibana/
+        - { URL: !GetAtt ElasticsearchDomain.DomainEndpoint }
+    Description: Elasticsearch Kibana URL
