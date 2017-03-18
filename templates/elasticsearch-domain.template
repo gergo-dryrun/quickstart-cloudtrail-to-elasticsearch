@@ -116,7 +116,7 @@ Resources:
             Effect: Allow
             Principal:
               AWS: "*"
-            Action: "es:Http*"
+            Action: "es:ESHttp*"
             Condition:
               IpAddress:
                 aws:SourceIp: !Ref KibanaAccessIps
