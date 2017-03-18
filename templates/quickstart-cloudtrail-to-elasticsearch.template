@@ -81,6 +81,11 @@ Parameters:
   KibanaAccessIps:
       Description: 'Comma delimited CIDR ranges for accessing kibana'
       Type: CommaDelimitedList
+  RetentionPeriod:
+    Description: Cloudtrail indices retention as expressed in days
+    Type: Number
+    MinValue: 1
+    Default: 30
 
 Resources:
   ESDomainStack:
@@ -119,6 +124,16 @@ Resources:
       Parameters:
         ElasticSearchDomainEndpoint: !GetAtt ESDomainStack.Outputs.ElasticSearchDomainEndpoint
         ElasticSearchDomainARN: !GetAtt ESDomainStack.Outputs.ElasticSearchDomainARN
+  ElasticSearchCuratorLambda:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3-eu-west-1.amazonaws.com/quickstart-cloudtrail-to-elasticsearch/template/elasticsearch-curator.template
+      TimeoutInMinutes: '30'
+      Parameters:
+        ElasticSearchDomainEndpoint: !GetAtt ESDomainStack.Outputs.ElasticSearchDomainEndpoint
+        ElasticSearchDomainARN: !GetAtt ESDomainStack.Outputs.ElasticSearchDomainARN
+        RetentionPeriod: !Ref RetentionPeriod
+
 Outputs:
   KibanaEndpointURL:
     Value: !GetAtt ESDomainStack.Outputs.KibanaEndpointURL

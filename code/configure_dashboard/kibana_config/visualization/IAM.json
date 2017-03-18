@@ -5,6 +5,6 @@
   "uiStateJSON": "{}", 
   "version": 1, 
   "kibanaSavedObjectMeta": {
-    "searchSourceJSON": "{\"index\":\"cwl-*\",\"query\":{\"query_string\":{\"query\":\"userIdentity.type:IAMUser\",\"analyze_wildcard\":true}},\"filter\":[]}"
+    "searchSourceJSON": "{\"index\":\"cwl-*\",\"query\":{\"query_string\":{\"query\":\"eventSource:iam.amazonaws.com\",\"analyze_wildcard\":true}},\"filter\":[]}"
   }
 }
