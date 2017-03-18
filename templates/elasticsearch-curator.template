@@ -1,0 +1,109 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Creates curator lambda for cloudtrail indices.'
+
+Parameters:
+  ElasticSearchDomainEndpoint:
+    Description: Endpoint for ElasticSearch Domain
+    Type: String
+    MinLength: 1
+    MaxLength: 255
+  ElasticSearchDomainARN:
+    Description: ARN of ElasticSearch Domain
+    Type: String
+    MinLength: 1
+    MaxLength: 255
+  IndexPrefix:
+    Description: Index prefix for curator
+    Type: String
+    MinLength: 1
+    MaxLength: 255
+    Default: cwl-
+  RetentionPeriod:
+    Description: Retention as expressed in days for curator
+    Type: Number
+    MinValue: 1
+    Default: 30
+
+Resources:
+
+  LambdaExecutionerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+
+  LambdaRolePolicies:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: es-http-permissions
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Action: es:ESHttp*
+            Resource: !Sub ${ElasticSearchDomainARN}/*
+          -
+            Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+            Resource:
+              !Sub |-
+                arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+          -
+            Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource:
+              !Sub |-
+                arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/elasticsearch-curator:*
+      Roles:
+        -
+          !Ref LambdaExecutionerRole
+
+  ElasticSearchCurator:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: elasticsearch-curator
+      Runtime: python2.7
+      Handler: curator.lambda_handler
+      Role: !GetAtt LambdaExecutionerRole.Arn
+      Timeout: 300
+      Environment:
+        Variables:
+          ES_ENDPOINT: !Ref ElasticSearchDomainEndpoint
+          INDEX_PREFIX: !Ref IndexPrefix
+          RETENTION: !Ref RetentionPeriod
+      Code:
+        S3Bucket: quickstart-cloudtrail-to-elasticsearch
+        S3Key: code/curator_lambda.zip
+
+  DailyEvent:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Daily invocation of curator lambda
+      ScheduleExpression: 'cron(0 2 * * ? *)'
+      State: ENABLED
+      Targets:
+        -
+          Arn: !GetAtt ElasticSearchCurator.Arn
+          Id: CuratorTrigger
+
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt ElasticSearchCurator.Arn
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !GetAtt DailyEvent.Arn
