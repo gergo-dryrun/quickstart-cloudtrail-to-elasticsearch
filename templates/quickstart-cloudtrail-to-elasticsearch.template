@@ -12,7 +12,7 @@ Parameters:
     Description: Number of elasticsearch nodes
     Type: Number
     Default: 2
-    MaxValue: 5
+    MaxValue: 20
     MinValue: 1
   NodeInstanceType:
     Description: 'ElasticSearch node type The t2.micro instance type is supported only with Elasticsearch version 2.3 or 1.5.
@@ -58,9 +58,9 @@ Parameters:
   MasterInstanceCount:
     Description: Number of elasticsearch master
     Type: Number
-    Default: 1
-    MaxValue: 20
-    MinValue: 1
+    Default: 2
+    MaxValue: 5
+    MinValue: 2
   MasterInstanceType:
     Description: 'ElasticSearch master node type'
     Type: String
