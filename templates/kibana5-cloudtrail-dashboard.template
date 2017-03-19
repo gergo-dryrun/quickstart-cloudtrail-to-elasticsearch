@@ -17,6 +17,7 @@ Resources:
 
   DashboardSetup:
     Type: Custom::DashboardSetup
+    DependsOn: LambdaRolePolicies
     Properties:
       ServiceToken: !GetAtt DashboardConfigFunction.Arn
 
