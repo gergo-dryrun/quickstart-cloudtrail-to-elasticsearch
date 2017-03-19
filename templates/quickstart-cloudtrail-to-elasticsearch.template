@@ -79,8 +79,9 @@ Parameters:
     Type: String
     Default: "true"
   KibanaAccessIps:
-      Description: 'Comma delimited CIDR ranges for accessing kibana'
-      Type: CommaDelimitedList
+    Description: 'Comma delimited CIDR ranges for accessing kibana. AT LEAST ONE VALUE IS NEEDED!'
+    Type: CommaDelimitedList
+    Default: 127.0.0.1/32
   RetentionPeriod:
     Description: Cloudtrail indices retention as expressed in days
     Type: Number

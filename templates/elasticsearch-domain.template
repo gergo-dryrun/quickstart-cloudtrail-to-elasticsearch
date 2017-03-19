@@ -82,8 +82,11 @@ Parameters:
       - "false"
       - "true"
   KibanaAccessIps:
-    Description: 'Comma delimited CIDR ranges for accessing kibana'
+    Description: 'Comma delimited CIDR ranges for accessing kibana. AT LEAST ONE VALUE IS NEEDED!'
     Type: CommaDelimitedList
+    Default: 127.0.0.1/32
+
+
 Conditions:
   CreateDedicatedMaster: !Equals [!Ref DedicatedMaster, "true"]
 
