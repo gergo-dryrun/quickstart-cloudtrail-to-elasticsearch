@@ -76,7 +76,7 @@ Resources:
     Properties:
       FunctionName: elasticsearch-curator
       Runtime: python2.7
-      Handler: curator.lambda_handler
+      Handler: curator_lambda.lambda_handler
       Role: !GetAtt LambdaExecutionerRole.Arn
       Timeout: 300
       Environment:
